@@ -21,11 +21,12 @@ var Mailgun = require('mailgun').Mailgun,
     P = require('bluebird');
 
 exports.register = function (plugin, options, next) {
-    plugin.log(['plugin', 'info'], "Registering the Mailer plugin");
 
     var config = plugin.plugins['hapi-config'].CurrentConfiguration;
     var log = plugin.plugins['covistra-system'].systemLog;
     var TemplateEngine = plugin.plugins['covistra-system'].TemplateEngine;
+
+    log.debug("Registering the Mailer plugin");
 
     var mg = new Mailgun(config.get('plugins:mailer:mailgun:key'));
 
