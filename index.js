@@ -1,40 +1,27 @@
-/**
-
- Copyright 2015 Covistra Technologies Inc.
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
- http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
- */
 "use strict";
 var Mailgun = require('mailgun').Mailgun,
     MailComposer = require("mailcomposer").MailComposer,
-    _ = require('lodash'),
+    fs = require('fs'),
+    path = require('path'),
     P = require('bluebird');
 
 exports.register = function (plugin, options, next) {
+    plugin.log(['plugin', 'info'], "Registering the Mailer plugin");
 
     var config = plugin.plugins['hapi-config'].CurrentConfiguration;
     var log = plugin.plugins['covistra-system'].systemLog;
     var TemplateEngine = plugin.plugins['covistra-system'].TemplateEngine;
 
-    log.debug("Registering the Mailer plugin");
-
     var mg = new Mailgun(config.get('plugins:mailer:mailgun:key'));
 
-    plugin.expose('sendEmailToUser', function(from, user, subject, text) {
+    TemplateEngine.registerTemplate('email_fr', fs.readFileSync(path.resolve(__dirname, "layouts", "mail-fr.html.hbs"), 'utf8'));
+    TemplateEngine.registerTemplate('email_en', fs.readFileSync(path.resolve(__dirname, "layouts", "mail-en.html.hbs"), 'utf8'));
+
+    plugin.expose('sendEmailToUser', function (from, user, subject, text) {
         log.debug("Mailer:sendEmailToUser", from, user, subject);
-        return new P(function(resolve, reject) {
-            mg.sendText(from, [user.email], subject, text, function(err) {
-                if(err) {
+        return new P(function (resolve, reject) {
+            mg.sendText(from, [user.email], subject, text, function (err) {
+                if (err) {
                     console.dir(err);
                     reject(err);
                 }
@@ -45,32 +32,45 @@ exports.register = function (plugin, options, next) {
         });
     });
 
-    plugin.expose('sendRichEmailToUser', function(from, user, msg) {
-        log.debug("Mailer:sendRichEmailToUser", from, user.email, msg.subject);
-        return new P(function(resolve, reject) {
+    /**
+     * Content maybe the following:
+     *
+     * {string}: This content will be used directly as the body of the email
+     * template: If the template field is provided, this will be used as a templateId and rendered. data will be used to provide context
+     * layout: This is a template engine used to provided skining and look and feel. content can be provided and will me merged with the layout
+     */
+    plugin.expose('sendRichEmailToUser', function (from, user, subject, content) {
+        log.debug("Mailer:sendEmailToUser", from, user, subject);
+        return new P(function (resolve, reject) {
             var mc = new MailComposer();
 
-            if(msg.template) {
-                msg.content = TemplateEngine.renderTemplate(msg.template, _.merge(msg.data,{ user: user, from: from}),{ sync: true });
+            if(content.template) {
+                log.debug("Rendering template %s with data", content.template, content.data);
+                content.content = TemplateEngine.renderTemplate(content.template, content.data, { sync: true });
+            }
+
+            if(content.layout) {
+                log.debug("Rendering email with layout %s", content.layout);
+                content = TemplateEngine.renderTemplate(content.layout, { content: content.content }, { sync: true });
             }
 
             mc.setMessageOption({
                 from: from,
                 to: user.email,
-                subject: msg.subject,
-                html: msg.content
+                subject: subject,
+                html: content
             });
 
-            return P.promisify(mc.buildMessage, mc)().then(function(msg) {
+            return P.promisify(mc.buildMessage, mc)().then(function (msg) {
                 log.trace("Message was built", msg);
 
-                if(!options.testMode) {
-                    return P.promisify(mg.sendRaw, mg)(from, [user.email], msg).then(resolve).then(function() {
+                if (!options.testMode) {
+                    return P.promisify(mg.sendRaw, mg)(from, [user.email], msg).then(resolve).then(function () {
                         log.debug("Message was successfully sent");
                     });
                 }
                 else {
-                    log.debug("Test Mode: Message was will not be sent",from, [user.email]);
+                    log.debug("Test Mode: Message was will not be sent", from, [user.email]);
                     log.trace("Message content:", msg);
                     resolve();
                 }
