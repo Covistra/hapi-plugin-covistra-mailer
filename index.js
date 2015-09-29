@@ -14,8 +14,8 @@ exports.register = function (plugin, options, next) {
 
     var mg = new Mailgun(config.get('plugins:mailer:mailgun:key'));
 
-    TemplateEngine.registerTemplate('email_fr', fs.readFileSync(path.resolve(__dirname, "layouts", "mail-fr.html.hbs"), 'utf8'));
-    TemplateEngine.registerTemplate('email_en', fs.readFileSync(path.resolve(__dirname, "layouts", "mail-en.html.hbs"), 'utf8'));
+    // Register default email template
+    TemplateEngine.registerTemplate('email', fs.readFileSync(path.resolve(__dirname, "layouts", "email.html.hbs"), 'utf8'));
 
     plugin.expose('sendEmailToUser', function (from, user, subject, text) {
         log.debug("Mailer:sendEmailToUser", from, user, subject);
@@ -51,7 +51,7 @@ exports.register = function (plugin, options, next) {
 
             if(content.layout) {
                 log.debug("Rendering email with layout %s", content.layout);
-                content = TemplateEngine.renderTemplate(content.layout, { content: content.content }, { sync: true });
+                content = TemplateEngine.renderTemplate(content.layout, { data: content.data, content: content.content}, { sync: true });
             }
 
             mc.setMessageOption({
