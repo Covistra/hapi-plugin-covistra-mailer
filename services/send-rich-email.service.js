@@ -10,15 +10,40 @@ module.exports = function(server, config, log) {
     var service = function(msg) {
         log.debug("Mailer:sendEmailToUser", msg.from, msg.recipients, msg.subject);
         return new P(function (resolve, reject) {
+            var attachments = [];
 
             if(msg.content.template) {
                 log.debug("Rendering template %s with data", msg.content.template, msg.content.data);
-                msg.content.content = TemplateEngine.renderTemplate(msg.content.template, msg.content.data, { sync: true });
+
+                var tmpl = TemplateEngine.getTemplate(msg.content.template);
+                if(tmpl) {
+
+                    if(tmpl.extra.attachments) {
+                        attachments = attachments.concat(tmpl.extra.attachments);
+                    }
+
+                    msg.content.content = TemplateEngine.renderTemplate(msg.content.template, msg.content.data, { sync: true });
+                }
+
             }
 
             if(msg.content.layout) {
                 log.debug("Rendering email with layout %s", msg.content.layout);
-                msg.content = TemplateEngine.renderTemplate(msg.content.layout, { data: msg.content.data, content: msg.content.content}, { sync: true });
+
+                tmpl = TemplateEngine.getTemplate(msg.content.layout);
+                if(tmpl) {
+
+                    if(tmpl.extra.attachments) {
+                        attachments = attachments.concat(tmpl.extra.attachments);
+                    }
+
+                    msg.content = TemplateEngine.renderTemplate(msg.content.layout, { data: msg.content.data, content: msg.content.content}, { sync: true });
+                }
+
+            }
+
+            if(msg.content.attachments) {
+                attachments = attachments.concat(msg.content.attachments);
             }
 
             var options = {
@@ -26,7 +51,7 @@ module.exports = function(server, config, log) {
                 to: msg.recipients,
                 subject: msg.subject,
                 html: msg.content,
-                attachments: msg.content.attachments,
+                attachments: attachments,
                 alternatives: []
             };
 
