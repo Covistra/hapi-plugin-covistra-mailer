@@ -1,11 +1,14 @@
 var Joi = require('joi'),
     P = require('bluebird'),
-    mg = require('mailgun'),
+    Mailgun = require('mailgun').Mailgun,
     MailComposer = require("mailcomposer").MailComposer;
 
 module.exports = function(server, config, log) {
 
     var TemplateEngine = server.plugins['covistra-system'].TemplateEngine;
+
+    var MAILGUN_API = config.get("plugins:mailer:mailgun:key");
+    var mg = new Mailgun(MAILGUN_API);
 
     var service = function(msg) {
         log.debug("Mailer:sendEmailToUser", msg.from, msg.recipients, msg.subject);
