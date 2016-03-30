@@ -1,6 +1,6 @@
 {
   "name": "covistra-mailer",
-  "version": "1.0.1-pre",
+  "version": "1.0.1",
   "description": "CMBF email sending plugin. Expose emailing methods to the rest of the system",
   "author": "joelgrenon@covistra.com",
   "dependencies": {
