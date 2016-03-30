@@ -1,7 +1,7 @@
 var Joi = require('joi'),
     P = require('bluebird'),
     Mailgun = require('mailgun').Mailgun,
-    MailComposer = require("mailcomposer").MailComposer;
+    mailComposer = require("mailcomposer");
 
 module.exports = function(server, config, log) {
 
@@ -65,9 +65,9 @@ module.exports = function(server, config, log) {
                 });
             }
 
-            var mc = new MailComposer(options);
+            var email = mailComposer(options);
 
-            return P.promisify(mc.buildMessage, {context:mc})().then(function (emailMessage) {
+            return P.promisify(email.build, {context:email})().then(function (emailMessage) {
                 log.trace("Message was built", emailMessage);
                 return P.promisify(mg.sendRaw, {context: mg})(msg.from, msg.recipients, emailMessage).then(resolve).then(function () {
                     log.debug("Message was successfully sent");
