@@ -4,10 +4,10 @@
   "description": "CMBF email sending plugin. Expose emailing methods to the rest of the system",
   "author": "joelgrenon@covistra.com",
   "dependencies": {
-    "bluebird": "^2.9.34",
-    "lodash": "^3.10.1",
-    "mailchimp": "^1.1.0",
-    "mailcomposer": "^0.2.12",
+    "bluebird": "^3.3.4",
+    "lodash": "^4.6.1",
+    "mailchimp": "^1.1.5",
+    "mailcomposer": "^3.7.0",
     "mailgun": "^0.5.0"
   }
 }

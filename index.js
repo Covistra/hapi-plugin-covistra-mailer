@@ -5,12 +5,15 @@ var Mailgun = require('mailgun').Mailgun,
     path = require('path'),
     P = require('bluebird');
 
+exports.deps = ['covistra-system'];
+
 exports.register = function (plugin, options, next) {
     plugin.log(['plugin', 'info'], "Registering the Mailer plugin");
 
     var config = plugin.plugins['hapi-config'].CurrentConfiguration;
     var log = plugin.plugins['covistra-system'].systemLog;
     var TemplateEngine = plugin.plugins['covistra-system'].TemplateEngine;
+    var Services = plugin.plugins['covistra-system'].Services;
 
     var mg = new Mailgun(config.get('plugins:mailer:mailgun:key'));
 
@@ -22,7 +25,6 @@ exports.register = function (plugin, options, next) {
         return new P(function (resolve, reject) {
             mg.sendText(from, [user.email], subject, text, function (err) {
                 if (err) {
-                    console.dir(err);
                     reject(err);
                 }
                 else {
@@ -61,11 +63,11 @@ exports.register = function (plugin, options, next) {
                 html: content
             });
 
-            return P.promisify(mc.buildMessage, mc)().then(function (msg) {
+            return P.promisify(mc.buildMessage, {context:mc})().then(function (msg) {
                 log.trace("Message was built", msg);
 
                 if (!options.testMode) {
-                    return P.promisify(mg.sendRaw, mg)(from, [user.email], msg).then(resolve).then(function () {
+                    return P.promisify(mg.sendRaw, {context: mg})(from, [user.email], msg).then(resolve).then(function () {
                         log.debug("Message was successfully sent");
                     });
                 }
@@ -77,6 +79,8 @@ exports.register = function (plugin, options, next) {
             }).catch(reject);
         });
     });
+
+    Services.discover(__dirname, "services");
 
     next();
 };
