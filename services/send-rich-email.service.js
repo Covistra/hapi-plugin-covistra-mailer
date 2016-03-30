@@ -10,7 +10,6 @@ module.exports = function(server, config, log) {
     var service = function(msg) {
         log.debug("Mailer:sendEmailToUser", msg.from, msg.recipients, msg.subject);
         return new P(function (resolve, reject) {
-            var mc = new MailComposer();
 
             if(msg.content.template) {
                 log.debug("Rendering template %s with data", msg.content.template, msg.content.data);
@@ -22,12 +21,23 @@ module.exports = function(server, config, log) {
                 msg.content = TemplateEngine.renderTemplate(msg.content.layout, { data: msg.content.data, content: msg.content.content}, { sync: true });
             }
 
-            mc.setMessageOption({
+            var options = {
                 from: msg.from,
                 to: msg.recipients,
                 subject: msg.subject,
-                html: msg.content
-            });
+                html: msg.content,
+                attachments: msg.content.attachments,
+                alternatives: []
+            };
+
+            if(msg.content.text) {
+                options.alternatives.push({
+                    contentType: 'text/plain',
+                    content: msg.content.text
+                });
+            }
+
+            var mc = new MailComposer(options);
 
             return P.promisify(mc.buildMessage, {context:mc})().then(function (emailMessage) {
                 log.trace("Message was built", emailMessage);
@@ -48,7 +58,9 @@ module.exports = function(server, config, log) {
             content: Joi.alternatives().try(Joi.string(), Joi.object().keys({
                 data: Joi.object(),
                 template: Joi.string().optional(),
-                layout: Joi.string().optional()
+                layout: Joi.string().optional(),
+                attachments: Joi.array().items(Joi.object()).optional().description('See mailcomposer for details about attachments'),
+                text: Joi.string().description("Alternative version if rich email isn't supported").optional()
             }))
         }),
         callback: service
