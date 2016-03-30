@@ -5,7 +5,7 @@ var Joi = require('joi'),
 
 module.exports = function(server, config, log) {
 
-    var TemplateEngine = plugin.plugins['covistra-system'].TemplateEngine;
+    var TemplateEngine = server.plugins['covistra-system'].TemplateEngine;
 
     var service = function(msg) {
         log.debug("Mailer:sendEmailToUser", msg.from, msg.recipients, msg.subject);
